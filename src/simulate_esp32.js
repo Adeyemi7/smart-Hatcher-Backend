@@ -1,59 +1,60 @@
 // ---------------------------------------------------------
-// VIRTUAL ESP32 SIMULATOR (UPDATED FOR RENDER)
+// VIRTUAL ESP32 SIMULATOR
 // ---------------------------------------------------------
-// 1. Install Axios first: npm install axios
-// 2. Run this script:     node src/simulate_esp32.js
+// 1. Ensure axios is installed: npm install axios
+// 2. Run this script: node src/simulate_esp32.js
 // ---------------------------------------------------------
 
 const axios = require('axios'); 
 
-// TARGET: Your live Render Backend
-// NOTE: I changed '/api/update' to '/api/sensor' to match your previous request.
-// If your backend route is named 'update', change 'sensor' back to 'update'.
+// ✅ UPDATED: Points to your live Render backend
 const SERVER_URL = "https://smart-hatcher-backend.onrender.com/api/sensor"; 
 
 console.log("--- STARTING VIRTUAL ESP32 ---");
 console.log(`Target: ${SERVER_URL}`);
 
 function pushData() {
-    // 1. Generate Fake Data (Random fluctuation)
+    // 1. Generate Fake Data
     // Temp: 37.0 - 38.0 | Humidity: 60.0 - 65.0
     const temp = (37 + Math.random()).toFixed(1);
     const hum = (60 + Math.random() * 5).toFixed(1);
 
     // 2. Prepare JSON payload
-    // Ensure these key names (temperature, humidity) match what your backend expects!
     const payload = {
         temperature: parseFloat(temp),
         humidity: parseFloat(hum),
-        sensorId: "SIMULATOR_001" // Added ID just in case backend needs it
+        sensorId: "ESP32_SIMULATOR_001"
     };
 
     // 3. PUSH to Server
     axios.post(SERVER_URL, payload)
         .then(res => {
-            console.log(`[SENT] T:${temp}°C  H:${hum}%  -> Server Response: ${res.status}`);
+            // Success Log
+            console.log(`✅ [SENT] T:${temp}°C  H:${hum}%  -> Server Response: ${res.status} OK`);
         })
         .catch(err => {
-            console.error(`[ERROR] Failed to connect to ${SERVER_URL}`);
-            // Show specific error info if available
+            // Error Log
+            console.error(`❌ [ERROR] Failed to send data.`);
             if (err.response) {
-                console.error(`Server responded with: ${err.response.status} ${err.response.statusText}`);
+                // The request was made and the server responded with a status code
+                // that falls out of the range of 2xx (like 404 or 500)
+                console.error(`   Server replied: ${err.response.status} ${err.response.statusText}`);
+                if (err.response.status === 404) {
+                    console.error("   (This means the backend code with the '/api/sensor' route hasn't finished deploying to Render yet. Wait 2 mins!)");
+                }
             } else {
-                console.error(err.message);
+                // Something happened in setting up the request that triggered an Error
+                console.error(`   ${err.message}`);
             }
         });
 }
 
 // ---------------------------------------------------------
-// TIMING CONFIGURATION
+// TIMING
 // ---------------------------------------------------------
 
-// TEST MODE (Faster) - Runs every 5 seconds so you can verify it works quickly
-setInterval(pushData, 5000); 
+// Run every 5 seconds for testing
+setInterval(pushData, 60000); 
 
-// REAL MODE (Production) - Runs every 1 minute (Uncomment this when done testing)
-// setInterval(pushData, 60000); 
-
-// Run once immediately so we don't have to wait for the first timer
+// Run immediately on start
 pushData();
